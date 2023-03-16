@@ -138,13 +138,15 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
       )
     },
     async shutdown(code, reason) {
-      gateway.shards.forEach((shard) => shard.close(code, reason))
+      gateway.shards.forEach((shard) => {
+        shard.close(code, reason)
+      })
 
       await delay(5000)
     },
     async tellWorkerToIdentify(workerId, shardId, bucketId) {
       logger.debug(`[Gateway] tell worker to identify (${workerId}, ${shardId}, ${bucketId})`)
-      return await gateway.identify(shardId)
+      await gateway.identify(shardId)
     },
     async identify(shardId: number) {
       let shard = this.shards.get(shardId)
@@ -164,7 +166,7 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
           },
           events: options.events,
           requestIdentify: async () => {
-            return await gateway.identify(shardId);
+            await gateway.identify(shardId)
           },
           shardIsReady: async () => {
             logger.debug(`[Shard] Shard #${shardId} is ready`)
@@ -180,7 +182,7 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
       const bucket = gateway.buckets.get(shardId % gateway.connection.sessionStartLimit.maxConcurrency)
       if (!bucket) return
 
-      return await new Promise((resolve) => {
+      await new Promise((resolve) => {
         // Mark that we are making an identify request so another is not made.
         bucket.identifyRequests.push(resolve)
         logger.debug(`[Gateway] identifying shard #(${shardId}).`)
@@ -191,12 +193,13 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
     async kill(shardId: number) {
       const shard = this.shards.get(shardId)
       if (!shard) {
-        return logger.debug(`[Gateway] kill shard but not found (${shardId})`)
+        logger.debug(`[Gateway] kill shard but not found (${shardId})`)
+        return
       }
 
       logger.debug(`[Gateway] kill shard (${shardId})`)
       this.shards.delete(shardId)
-      return await shard.shutdown()
+      await shard.shutdown()
     },
 
     async requestIdentify(shardId: number) {
@@ -251,7 +254,7 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
       }
 
       logger.debug(`[Gateway] editShardStatus shardId: ${shardId} -> data: ${JSON.stringify(data)}`)
-      return await shard.editShardStatus(data)
+      await shard.editShardStatus(data)
     },
 
     async requestMembers(guildId, options) {
@@ -273,7 +276,7 @@ export function createGatewayManager(options: CreateGatewayManagerOptions): Gate
       }
 
       logger.debug(`[Gateway] leaveVoiceChannel guildId: ${guildId} Shard ${shardId}`)
-      return await shard.leaveVoiceChannel(guildId)
+      await shard.leaveVoiceChannel(guildId)
     },
   }
 

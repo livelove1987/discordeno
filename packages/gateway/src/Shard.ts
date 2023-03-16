@@ -112,7 +112,7 @@ export class DiscordenoShard {
   close(code: number, reason: string): void {
     if (this.socket?.readyState !== WebSocket.OPEN) return
 
-    return this.socket?.close(code, reason)
+    this.socket?.close(code, reason)
   }
 
   /** Connect the shard with the gateway and start heartbeating. This will not identify the shard to the gateway. */
@@ -132,9 +132,15 @@ export class DiscordenoShard {
     this.socket = socket
 
     // TODO: proper event handling
-    socket.onerror = (event) => console.log({ error: event, shardId: this.id })
-    socket.onclose = async (event) => await this.handleClose(event)
-    socket.onmessage = async (message) => await this.handleMessage(message)
+    socket.onerror = (event) => {
+      console.log({ error: event, shardId: this.id })
+    }
+    socket.onclose = async (event) => {
+      await this.handleClose(event)
+    }
+    socket.onmessage = async (message) => {
+      await this.handleMessage(message)
+    }
 
     return await new Promise((resolve) => {
       socket.onopen = () => {
@@ -184,7 +190,7 @@ export class DiscordenoShard {
       true,
     )
 
-    return await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       this.resolves.set('READY', () => {
         this.events.identified?.(this)
         // Tells the manager that this shard is ready
@@ -219,7 +225,8 @@ export class DiscordenoShard {
     if (!this.sessionId) {
       logger.debug(`[Shard] Trying to resume a shard #${this.id} that was NOT first identified. (No session id found)`)
 
-      return await this.identify()
+      await this.identify()
+      return
     }
 
     this.state = ShardState.Resuming
@@ -239,8 +246,10 @@ export class DiscordenoShard {
       true,
     )
 
-    return await new Promise((resolve) => {
-      this.resolves.set('RESUMED', () => resolve())
+    await new Promise<void>((resolve) => {
+      this.resolves.set('RESUMED', () => {
+        resolve()
+      })
       // If it is attempted to resume with an invalid session id,
       // Discord sends an invalid session payload
       // Not erroring here since it is easy that this happens, also it would be not catchable
@@ -308,7 +317,8 @@ export class DiscordenoShard {
         this.state = ShardState.Identifying
         this.events.disconnected?.(this)
 
-        return await this.identify()
+        await this.identify()
+        return
       }
       // When these codes are received something went really wrong.
       // On those we cannot start a reconnect attempt.
@@ -331,7 +341,7 @@ export class DiscordenoShard {
         this.state = ShardState.Resuming
         this.events.disconnected?.(this)
 
-        return await this.resume()
+        await this.resume()
       }
     }
   }
@@ -437,7 +447,9 @@ export class DiscordenoShard {
       this.events.resumed?.(this)
 
       // Continue the requests which have been queued since the shard went offline.
-      this.offlineSendQueue.map((resolve) => resolve())
+      this.offlineSendQueue.forEach((resolve) => {
+        resolve()
+      })
 
       this.resolves.get('RESUMED')?.(packet)
       this.resolves.delete('RESUMED')
@@ -453,7 +465,9 @@ export class DiscordenoShard {
 
       // Continue the requests which have been queued since the shard went offline.
       // Important when this is a re-identify
-      this.offlineSendQueue.map((resolve) => resolve())
+      this.offlineSendQueue.forEach((resolve) => {
+        resolve()
+      })
 
       this.resolves.get('READY')?.(packet)
       this.resolves.delete('READY')
@@ -484,7 +498,7 @@ export class DiscordenoShard {
     // Safeguard incase decompression failed to make a string.
     if (typeof preProcessMessage !== 'string') return
 
-    return await this.handleDiscordPacket(JSON.parse(preProcessMessage) as DiscordGatewayPayload)
+    await this.handleDiscordPacket(JSON.parse(preProcessMessage) as DiscordGatewayPayload)
   }
 
   /**
@@ -551,7 +565,8 @@ export class DiscordenoShard {
           logger.debug(`[Shard] Heartbeat not acknowledged for shard #${this.id}.`)
           this.close(ShardSocketCloseCodes.ZombiedConnection, 'Zombied connection, did not receive an heartbeat ACK in time.')
 
-          return await this.identify()
+          await this.identify()
+          return
         }
 
         this.heart.acknowledged = false
@@ -601,7 +616,7 @@ export class DiscordenoShard {
     options?: AtLeastOne<Omit<UpdateVoiceState, 'guildId' | 'channelId'>>,
   ): Promise<void> {
     logger.debug(`[Shard] joinVoiceChannel guildId: ${guildId} channelId: ${channelId}`)
-    return await this.send({
+    await this.send({
       op: GatewayOpcodes.VoiceStateUpdate,
       d: {
         guild_id: guildId.toString(),
@@ -620,7 +635,7 @@ export class DiscordenoShard {
    */
   async editBotStatus(data: StatusUpdate): Promise<void> {
     logger.debug(`[Shard] editBotStatus data: ${JSON.stringify(data)}`)
-    return await this.editShardStatus(data)
+    await this.editShardStatus(data)
   }
 
   /**
@@ -632,7 +647,7 @@ export class DiscordenoShard {
    */
   async editShardStatus(data: StatusUpdate): Promise<void> {
     logger.debug(`[Shard] editShardStatus shardId: ${this.id} -> data: ${JSON.stringify(data)}`)
-    return await this.send({
+    await this.send({
       op: GatewayOpcodes.PresenceUpdate,
       d: {
         since: null,
@@ -731,7 +746,7 @@ export class DiscordenoShard {
    */
   async leaveVoiceChannel(guildId: BigString): Promise<void> {
     logger.debug(`[Shard] leaveVoiceChannel guildId: ${guildId} Shard ${this.id}`)
-    return await this.send({
+    await this.send({
       op: GatewayOpcodes.VoiceStateUpdate,
       d: {
         guild_id: guildId.toString(),
