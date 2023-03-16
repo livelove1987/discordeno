@@ -30,7 +30,7 @@ export function createInvalidRequestBucket(options: InvalidRequestBucketOptions)
 
     waitUntilRequestAvailable: async function () {
       // eslint-disable-next-line no-async-promise-executor
-      return await new Promise(async (resolve) => {
+      await new Promise<void>(async (resolve) => {
         // If whatever amount of requests is left is more than the safety margin, allow the request
         if (bucket.isRequestAllowed()) {
           bucket.requested++
