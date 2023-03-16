@@ -56,17 +56,22 @@ export function createLogger({
 
     switch (level) {
       case LogLevels.Debug:
-        return console.debug(...log)
+        console.debug(...log)
+        return
       case LogLevels.Info:
-        return console.info(...log)
+        console.info(...log)
+        return
       case LogLevels.Warn:
-        return console.warn(...log)
+        console.warn(...log)
+        return
       case LogLevels.Error:
-        return console.error(...log)
+        console.error(...log)
+        return
       case LogLevels.Fatal:
-        return console.error(...log)
+        console.error(...log)
+        return
       default:
-        return console.log(...log)
+        console.log(...log)
     }
   }
 

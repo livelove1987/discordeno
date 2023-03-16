@@ -37,7 +37,7 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   stopSweeper(): void {
-    return clearInterval(this.sweeper?.intervalId)
+    clearInterval(this.sweeper?.intervalId)
   }
 
   changeSweeperInterval(newInterval: number): void {

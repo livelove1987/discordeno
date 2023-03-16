@@ -79,14 +79,14 @@ export class LeakyBucket implements LeakyBucketOptions {
 
   /** Pauses the execution until the request is available to be made. */
   async acquire(highPriority?: boolean): Promise<void> {
-    return await new Promise((resolve) => {
+    await new Promise((resolve) => {
       // High priority requests get added to the start of the queue
       if (highPriority) this.queue.unshift(resolve)
       // All other requests get pushed to the end.
       else this.queue.push(resolve)
 
       // Each request should trigger the queue to be processesd.
-      void this.processQueue()
+      this.processQueue()
     })
   }
 }
